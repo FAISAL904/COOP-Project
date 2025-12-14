@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Quality Assessment Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #764ba2;
+            background: #f0f0f5;
+        }
+
+        .upload-section.dragover {
+            border-color: #764ba2;
+            background: #e8e8f5;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .upload-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: none;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .upload-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .file-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .file-preview {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+            display: none;
+            max-height: 500px;
+            overflow: auto;
+        }
+
+        .file-preview.show {
+            display: block;
+        }
+
+        .file-preview h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .file-preview table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+
+        .file-preview table th,
+        .file-preview table td {
+            padding: 8px;
+            text-align: right;
+            border: 1px solid #ddd;
+        }
+
+        .file-preview table th {
+            background: #667eea;
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+
+        .file-preview table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .evaluate-button {
+            background: #28a745;
+            color: white;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            margin-top: 20px;
+            transition: all 0.3s;
+            display: none;
+        }
+
+        .evaluate-button.show {
+            display: inline-block;
+        }
+
+        .evaluate-button:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        .results {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .results h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .quality-metric {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+        }
+
+        .quality-metric h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .metric-value {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .metric-value.good {
+            color: #28a745;
+        }
+
+        .metric-value.warning {
+            color: #ffc107;
+        }
+
+        .metric-value.bad {
+            color: #dc3545;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-top: 2px solid #667eea;
+            margin-top: 30px;
+            color: #666;
+        }
+
+        .footer p {
+            margin: 5px 0;
+            font-size: 0.95em;
+        }
+
+        .footer .developer {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .overall-score {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .overall-score h3 {
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .overall-score .score-value {
+            font-size: 3em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .dimension-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .dimension-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+
+        .dimension-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .dimension-card h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .dimension-score {
+            font-size: 2em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .dimension-details {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Data Quality Assessment Tool</h1>
+            <p>Upload your data files to evaluate their quality</p>
+        </div>
+        <div class="content">
+            <div class="upload-section" id="uploadSection">
+                <h2 style="margin-bottom: 20px; color: #333;">Upload Your Data File</h2>
+                <p style="margin-bottom: 20px; color: #666;">Supports CSV, Excel, and JSON files</p>
+                <div class="file-input-wrapper">
+                    <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.json" />
+                    <button class="upload-button">Choose File</button>
+                </div>
+                <div class="file-info" id="fileInfo"></div>
+                <div class="file-preview" id="filePreview"></div>
+                <button class="evaluate-button" id="evaluateButton">Evaluate Data Quality</button>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 15px; color: #666;">Analyzing data quality...</p>
+            </div>
+
+            <div class="error" id="error"></div>
+
+            <div class="results" id="results">
+                <h2>Data Quality Report</h2>
+                <div id="overallScore"></div>
+                <div id="qualityMetrics"></div>
+            </div>
+        </div>
+        <div class="footer">
+            <p>Developed by</p>
+            <p class="developer">Faisal Alrmudhi</p>
+            <p style="font-size: 0.85em; margin-top: 10px; opacity: 0.8;">Data Quality Assessment Tool © 2024</p>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+        const fileInfo = document.getElementById('fileInfo');
+        const filePreview = document.getElementById('filePreview');
+        const evaluateButton = document.getElementById('evaluateButton');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const qualityMetrics = document.getElementById('qualityMetrics');
+        const errorDiv = document.getElementById('error');
+
+        let selectedFile = null;
+
+        // Drag and drop handlers
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            selectedFile = file;
+            const fileSize = (file.size / 1024 / 1024).toFixed(2);
+            fileInfo.innerHTML = `
+                <strong>Selected File:</strong> ${file.name}<br>
+                <strong>Size:</strong> ${fileSize} MB<br>
+                <strong>Type:</strong> ${file.type || 'Unknown'}
+            `;
+            fileInfo.classList.add('show');
+            evaluateButton.classList.add('show');
+            results.classList.remove('show');
+            errorDiv.classList.remove('show');
+            
+            // Preview file
+            previewFile(file);
+        }
+
+        function previewFile(file) {
+            const reader = new FileReader();
+            const fileName = file.name.toLowerCase();
+            
+            if (fileName.endsWith('.csv')) {
+                reader.onload = (e) => {
+                    const text = e.target.result;
+                    const lines = text.split('\n').slice(0, 21); // First 20 rows
+                    const headers = lines[0].split(',');
+                    
+                    let tableHTML = '<h3>File Preview (First 20 rows)</h3><table><thead><tr>';
+                    headers.forEach(header => {
+                        tableHTML += `<th>${header.trim()}</th>`;
+                    });
+                    tableHTML += '</tr></thead><tbody>';
+                    
+                    for (let i = 1; i < lines.length && i <= 20; i++) {
+                        if (lines[i].trim()) {
+                            tableHTML += '<tr>';
+                            const cells = lines[i].split(',');
+                            cells.forEach(cell => {
+                                tableHTML += `<td>${cell.trim()}</td>`;
+                            });
+                            tableHTML += '</tr>';
+                        }
+                    }
+                    tableHTML += '</tbody></table>';
+                    filePreview.innerHTML = tableHTML;
+                    filePreview.classList.add('show');
+                };
+                reader.readAsText(file);
+            } else if (fileName.endsWith('.json')) {
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        const dataArray = Array.isArray(data) ? data : [data];
+                        const previewData = dataArray.slice(0, 20);
+                        
+                        if (previewData.length > 0) {
+                            const headers = Object.keys(previewData[0]);
+                            let tableHTML = '<h3>File Preview (First 20 rows)</h3><table><thead><tr>';
+                            headers.forEach(header => {
+                                tableHTML += `<th>${header}</th>`;
+                            });
+                            tableHTML += '</tr></thead><tbody>';
+                            
+                            previewData.forEach(row => {
+                                tableHTML += '<tr>';
+                                headers.forEach(header => {
+                                    const value = row[header];
+                                    tableHTML += `<td>${value !== null && value !== undefined ? String(value) : ''}</td>`;
+                                });
+                                tableHTML += '</tr>';
+                            });
+                            tableHTML += '</tbody></table>';
+                        filePreview.innerHTML = tableHTML;
+                        filePreview.classList.add('show');
+                        }
+                    } catch (error) {
+                        filePreview.innerHTML = '<p style="color: #dc3545;">Error reading JSON file</p>';
+                        filePreview.classList.add('show');
+                    }
+                };
+                reader.readAsText(file);
+            } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                filePreview.innerHTML = '<h3>File Preview</h3><p style="color: #667eea; padding: 20px;">Excel files will be displayed after evaluation. Please upload and evaluate the file to see the data.</p>';
+                filePreview.classList.add('show');
+            } else {
+                filePreview.innerHTML = '<p style="color: #666;">Preview not available for this file type</p>';
+                filePreview.classList.add('show');
+            }
+        }
+
+        evaluateButton.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            loading.classList.add('show');
+            results.classList.remove('show');
+            errorDiv.classList.remove('show');
+            evaluateButton.disabled = true;
+
+            try {
+                const response = await fetch('/evaluate', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'An error occurred');
+                }
+
+                displayResults(data);
+            } catch (error) {
+                errorDiv.textContent = `Error: ${error.message}`;
+                errorDiv.classList.add('show');
+            } finally {
+                loading.classList.remove('show');
+                evaluateButton.disabled = false;
+            }
+        });
+
+        function getStatusClass(score) {
+            if (score >= 80) return 'good';
+            if (score >= 60) return 'warning';
+            return 'bad';
+        }
+
+        function displayResults(data) {
+            qualityMetrics.innerHTML = '';
+            
+            // Display overall score
+            const overallScoreDiv = document.getElementById('overallScore');
+            const overallStatus = getStatusClass(data.overall_score || 0);
+            overallScoreDiv.innerHTML = `
+                <div class="overall-score">
+                    <h3>Overall Quality Score</h3>
+                    <div class="score-value ${overallStatus}" style="color: ${overallStatus === 'good' ? '#28a745' : overallStatus === 'warning' ? '#ffc107' : '#dc3545'}">
+                        ${(data.overall_score || 0).toFixed(2)}%
+                    </div>
+                    <p>Based on ${data.timeliness_applicable !== false && data.timeliness_score !== null && data.timeliness_score !== undefined ? '6' : '5'} quality dimensions</p>
+                </div>
+            `;
+
+            // Display 6 quality dimensions
+            const dimensions = [
+                {
+                    title: 'Completeness',
+                    score: data.completeness_score || 0,
+                    applicable: true,
+                    details: `Missing values: ${data.missing_values || 0} (${(data.missing_percentage || 0).toFixed(2)}%)`,
+                    description: 'Measures the completeness of data and absence of missing values'
+                },
+                {
+                    title: 'Consistency',
+                    score: data.consistency_score || 0,
+                    applicable: true,
+                    details: `Issues: ${data.consistency_issues || 0} | Type inconsistencies: ${data.type_inconsistencies || 0}`,
+                    description: 'Measures the consistency of data types and formats'
+                },
+                {
+                    title: 'Uniqueness',
+                    score: data.uniqueness_score || 0,
+                    applicable: true,
+                    details: `Duplicate rows: ${data.duplicate_rows || 0} (${(data.duplicate_percentage || 0).toFixed(2)}%)`,
+                    description: 'Measures the uniqueness of data and absence of duplicates'
+                },
+                {
+                    title: 'Validity',
+                    score: data.validity_score || 0,
+                    applicable: true,
+                    details: `Validity issues: ${data.validity_issues || 0}`,
+                    description: 'Measures the validity of data and compliance with defined rules'
+                },
+                {
+                    title: 'Accuracy',
+                    score: data.accuracy_score || 0,
+                    applicable: true,
+                    details: `Outliers detected: ${data.accuracy_issues || 0}`,
+                    description: 'Measures the accuracy of data and absence of outliers'
+                },
+                {
+                    title: 'Timeliness',
+                    score: data.timeliness_score,
+                    applicable: data.timeliness_applicable !== false && data.timeliness_score !== null && data.timeliness_score !== undefined,
+                    details: (data.timeliness_applicable !== false && data.timeliness_score !== null && data.timeliness_score !== undefined)
+                        ? `Year columns: ${data.year_columns_found || 0} | Old years: ${data.old_years_count || 0}`
+                        : 'No year or date column found in the data',
+                    description: (data.timeliness_applicable !== false && data.timeliness_score !== null && data.timeliness_score !== undefined)
+                        ? 'Measures the timeliness of data and how recent it is'
+                        : 'Cannot measure timeliness - no year or date column found in the data'
+                }
+            ];
+
+            const dimensionsContainer = document.createElement('div');
+            dimensionsContainer.className = 'dimension-grid';
+
+            dimensions.forEach(dim => {
+                let cardContent = '';
+                
+                if (dim.applicable === false || dim.score === null || dim.score === undefined) {
+                    // Not applicable - show N/A
+                    cardContent = `
+                        <h4>${dim.title}</h4>
+                        <div class="dimension-score" style="color: #6c757d; font-size: 1.5em;">
+                            Not Applicable<br><span style="font-size: 0.6em;">N/A</span>
+                        </div>
+                        <div class="dimension-details">
+                            <p><strong>${dim.details}</strong></p>
+                            <p style="margin-top: 8px; font-style: italic; font-size: 0.85em; color: #6c757d;">${dim.description}</p>
+                        </div>
+                    `;
+                } else {
+                    const status = getStatusClass(dim.score);
+                    const statusColor = status === 'good' ? '#28a745' : status === 'warning' ? '#ffc107' : '#dc3545';
+                    
+                    cardContent = `
+                        <h4>${dim.title}</h4>
+                        <div class="dimension-score" style="color: ${statusColor}">
+                            ${dim.score.toFixed(2)}%
+                        </div>
+                        <div class="dimension-details">
+                            <p><strong>${dim.details}</strong></p>
+                            <p style="margin-top: 8px; font-style: italic; font-size: 0.85em;">${dim.description}</p>
+                        </div>
+                    `;
+                }
+                
+                const card = document.createElement('div');
+                card.className = 'dimension-card';
+                card.innerHTML = cardContent;
+                dimensionsContainer.appendChild(card);
+            });
+
+            qualityMetrics.appendChild(dimensionsContainer);
+
+            // Add basic info
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'quality-metric';
+            infoDiv.style.marginTop = '30px';
+            infoDiv.innerHTML = `
+                <h3>General Information</h3>
+                <p><strong>Total Rows:</strong> ${data.total_rows || 0}</p>
+                <p><strong>Total Columns:</strong> ${data.total_columns || 0}</p>
+            `;
+            qualityMetrics.appendChild(infoDiv);
+
+            // Add column details if available
+            if (data.column_details && data.column_details.length > 0) {
+                const columnDiv = document.createElement('div');
+                columnDiv.className = 'quality-metric';
+                columnDiv.style.marginTop = '20px';
+                columnDiv.innerHTML = '<h3>Column Information</h3>';
+                
+                const columnList = document.createElement('ul');
+                columnList.style.marginTop = '10px';
+                columnList.style.listStyle = 'none';
+                columnList.style.padding = '0';
+                
+                data.column_details.forEach(col => {
+                    const li = document.createElement('li');
+                    li.style.padding = '8px';
+                    li.style.borderBottom = '1px solid #eee';
+                    li.innerHTML = `<strong>${col.name}:</strong> ${col.type} (${col.missing} missing)`;
+                    columnList.appendChild(li);
+                });
+                
+                columnDiv.appendChild(columnList);
+                qualityMetrics.appendChild(columnDiv);
+            }
+
+            // Add data preview after evaluation
+            if (data.preview_data && data.preview_data.length > 0 && data.preview_columns) {
+                const previewDiv = document.createElement('div');
+                previewDiv.className = 'quality-metric';
+                previewDiv.style.marginTop = '20px';
+                previewDiv.innerHTML = '<h3>Data Preview (First 20 rows)</h3>';
+                
+                const previewTable = document.createElement('table');
+                previewTable.style.width = '100%';
+                previewTable.style.borderCollapse = 'collapse';
+                previewTable.style.marginTop = '10px';
+                previewTable.style.fontSize = '0.9em';
+                
+                // Header
+                const thead = document.createElement('thead');
+                const headerRow = document.createElement('tr');
+                data.preview_columns.forEach(col => {
+                    const th = document.createElement('th');
+                    th.textContent = col;
+                    th.style.padding = '8px';
+                    th.style.border = '1px solid #ddd';
+                    th.style.background = '#667eea';
+                    th.style.color = 'white';
+                    th.style.textAlign = 'left';
+                    headerRow.appendChild(th);
+                });
+                thead.appendChild(headerRow);
+                previewTable.appendChild(thead);
+                
+                // Body
+                const tbody = document.createElement('tbody');
+                data.preview_data.forEach((row, idx) => {
+                    const tr = document.createElement('tr');
+                    if (idx % 2 === 0) {
+                        tr.style.background = '#f8f9fa';
+                    }
+                    data.preview_columns.forEach(col => {
+                        const td = document.createElement('td');
+                        td.textContent = row[col] !== null && row[col] !== undefined ? String(row[col]) : '';
+                        td.style.padding = '8px';
+                        td.style.border = '1px solid #ddd';
+                        td.style.textAlign = 'left';
+                        tr.appendChild(td);
+                    });
+                    tbody.appendChild(tr);
+                });
+                previewTable.appendChild(tbody);
+                
+                previewDiv.appendChild(previewTable);
+                qualityMetrics.appendChild(previewDiv);
+            }
+
+            results.classList.add('show');
+        }
+    </script>
+</body>
+</html>
